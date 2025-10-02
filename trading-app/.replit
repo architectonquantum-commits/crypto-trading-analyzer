@@ -1,8 +1,0 @@
-run = "bash start.sh"
-hidden = [".config", ".pythonlibs"]
-
-[nix]
-channel = "stable-23_11"
-
-[deployment]
-run = ["sh", "-c", "bash start.sh"]
