@@ -12,7 +12,7 @@ from app.utils.technical_analysis import (
     detect_patterns,
     calculate_support_resistance
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 router = APIRouter()
 
@@ -34,6 +34,8 @@ class OperacionUpdate(BaseModel):
     notas: Optional[str] = None
 
 class OperacionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: str
     symbol: str
     timeframe: str
@@ -46,9 +48,6 @@ class OperacionResponse(BaseModel):
     precio_salida: Optional[float]
     resultado: Optional[float]
     notas: Optional[str]
-
-    class Config:
-        from_attributes = True
 
 # ============= RUTAS DE DATOS =============
 
@@ -64,7 +63,7 @@ def get_symbols():
 @router.get("/data")
 def get_market_data(
     symbol: str = Query(..., description="Par de trading (BTC/USDT, ETH/USDT, etc.)"),
-    interval: str = Query(default="1h", regex="^(1m|5m|15m|1h|4h|1d)$"),
+    interval: str = Query(default="1h", pattern="^(1m|5m|15m|1h|4h|1d)$"),
     limit: int = Query(default=500, ge=1, le=1000)
 ):
     """
@@ -103,7 +102,7 @@ def get_ticker(symbol: str = Query(..., description="Par de trading (BTC/USDT, E
 @router.get("/analysis")
 def get_analysis(
     symbol: str = Query(..., description="Par de trading (BTC/USDT, ETH/USDT, etc.)"),
-    interval: str = Query(default="1h", regex="^(1m|5m|15m|1h|4h|1d)$"),
+    interval: str = Query(default="1h", pattern="^(1m|5m|15m|1h|4h|1d)$"),
     limit: int = Query(default=200, ge=50, le=500)
 ):
     """

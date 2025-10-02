@@ -1,7 +1,9 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+
     DATABASE_URL: str = "sqlite:///./trading_app.db"
     CORS_ORIGINS: str = "http://localhost:3000"
 
@@ -11,8 +13,5 @@ class Settings(BaseSettings):
 
     # Cache settings
     CACHE_TTL: int = 300  # 5 minutos
-
-    class Config:
-        env_file = ".env"
 
 settings = Settings()
