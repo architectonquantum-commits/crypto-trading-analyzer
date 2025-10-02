@@ -6,7 +6,7 @@ import pandas as pd
 
 from app.database import get_db
 from app.models.bitacora import Operacion, TipoOperacion
-from app.api.binance import binance_service
+from app.api.exchange import exchange_service
 from app.utils.technical_analysis import (
     calculate_indicators,
     detect_patterns,
@@ -54,28 +54,28 @@ class OperacionResponse(BaseModel):
 
 @router.get("/symbols")
 def get_symbols():
-    """Obtener lista de símbolos disponibles"""
+    """Obtener lista de símbolos disponibles desde Kraken"""
     try:
-        symbols = binance_service.get_available_symbols()
+        symbols = exchange_service.get_available_symbols()
         return {"symbols": symbols}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/data")
 def get_market_data(
-    symbol: str = Query(..., description="Par de trading (BTCUSDT, ETHUSDT, etc.)"),
+    symbol: str = Query(..., description="Par de trading (BTC/USDT, ETH/USDT, etc.)"),
     interval: str = Query(default="1h", regex="^(1m|5m|15m|1h|4h|1d)$"),
     limit: int = Query(default=500, ge=1, le=1000)
 ):
     """
-    Obtener datos OHLCV de Binance
+    Obtener datos OHLCV de Kraken
 
-    - **symbol**: Par de trading (BTCUSDT, ETHUSDT, etc. - sin barra)
+    - **symbol**: Par de trading (BTC/USDT, ETH/USDT, etc. - con barra)
     - **interval**: Temporalidad (1m, 5m, 15m, 1h, 4h, 1d)
     - **limit**: Cantidad de velas (máx 1000)
     """
     try:
-        df = binance_service.get_ohlcv(symbol, interval, limit)
+        df = exchange_service.get_ohlcv(symbol, interval, limit)
 
         # Convertir a formato JSON-friendly
         data = df.to_dict('records')
@@ -92,28 +92,28 @@ def get_market_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/ticker")
-def get_ticker(symbol: str = Query(..., description="Par de trading")):
-    """Obtener precio actual de un símbolo"""
+def get_ticker(symbol: str = Query(..., description="Par de trading (BTC/USDT, ETH/USDT, etc.)")):
+    """Obtener precio actual de un símbolo desde Kraken"""
     try:
-        ticker = binance_service.get_ticker(symbol)
+        ticker = exchange_service.get_ticker(symbol)
         return ticker
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/analysis")
 def get_analysis(
-    symbol: str = Query(..., description="Par de trading"),
+    symbol: str = Query(..., description="Par de trading (BTC/USDT, ETH/USDT, etc.)"),
     interval: str = Query(default="1h", regex="^(1m|5m|15m|1h|4h|1d)$"),
     limit: int = Query(default=200, ge=50, le=500)
 ):
     """
-    Análisis técnico completo de un símbolo
+    Análisis técnico completo de un símbolo desde Kraken
 
     Retorna indicadores técnicos, patrones detectados y niveles clave
     """
     try:
         # Obtener datos
-        df = binance_service.get_ohlcv(symbol, interval, limit)
+        df = exchange_service.get_ohlcv(symbol, interval, limit)
 
         # Calcular indicadores
         df = calculate_indicators(df)

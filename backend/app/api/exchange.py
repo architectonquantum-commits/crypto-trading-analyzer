@@ -4,11 +4,11 @@ import pandas as pd
 from typing import Optional, List, Dict, Any
 from app.services.cache import cache
 
-class BinanceService:
-    """Servicio para interactuar con Binance"""
+class KrakenService:
+    """Servicio para interactuar con Kraken"""
 
     def __init__(self):
-        self.exchange = ccxt.binance({
+        self.exchange = ccxt.kraken({
             'enableRateLimit': True,
             'options': {'defaultType': 'spot'}
         })
@@ -20,7 +20,7 @@ class BinanceService:
         limit: int = 500
     ) -> pd.DataFrame:
         """
-        Obtener datos OHLCV de Binance
+        Obtener datos OHLCV de Kraken
 
         Args:
             symbol: Par de trading (ej: 'BTC/USDT')
@@ -34,7 +34,7 @@ class BinanceService:
         if cached_data is not None:
             return pd.DataFrame(cached_data)
 
-        # Obtener datos de Binance
+        # Obtener datos de Kraken
         try:
             ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
 
@@ -52,7 +52,7 @@ class BinanceService:
             return df
 
         except Exception as e:
-            raise Exception(f"Error obteniendo datos de Binance: {str(e)}")
+            raise Exception(f"Error obteniendo datos de Kraken: {str(e)}")
 
     def get_ticker(self, symbol: str) -> Dict[str, Any]:
         """Obtener precio actual"""
@@ -108,4 +108,4 @@ class BinanceService:
             raise Exception(f"Error obteniendo símbolos: {str(e)}")
 
 # Instancia global
-binance_service = BinanceService()
+exchange_service = KrakenService()

@@ -65,7 +65,7 @@ function Chart({ symbol, interval }) {
     setLoading(true)
     try {
       // Obtener datos OHLCV
-      const dataResponse = await api.get(`/data/${symbol}/${interval}?limit=500`)
+      const dataResponse = await api.get(`/data?symbol=${symbol}&interval=${interval}&limit=500`)
       const candleData = dataResponse.data.data.map(item => ({
         time: new Date(item.timestamp).getTime() / 1000,
         open: item.open,
@@ -78,7 +78,7 @@ function Chart({ symbol, interval }) {
       chartRef.current.timeScale().fitContent()
 
       // Obtener análisis
-      const analysisResponse = await api.get(`/analysis/${symbol}/${interval}`)
+      const analysisResponse = await api.get(`/analysis?symbol=${symbol}&interval=${interval}`)
       setAnalysis(analysisResponse.data)
 
     } catch (error) {
