@@ -91,13 +91,12 @@ class KrakenService:
                 symbol for symbol in markets.keys()
                 if '/USDT' in symbol and markets[symbol]['active']
             ]
-            # Top cryptos por defecto
+            # Pares USDT disponibles en Kraken
             default_symbols = [
-                'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT',
-                'ADA/USDT', 'XRP/USDT', 'DOGE/USDT', 'MATIC/USDT',
-                'DOT/USDT', 'AVAX/USDT', 'LINK/USDT', 'UNI/USDT',
-                'ATOM/USDT', 'LTC/USDT', 'BCH/USDT', 'ALGO/USDT',
-                'VET/USDT', 'FIL/USDT', 'AAVE/USDT', 'SAND/USDT'
+                'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'ADA/USDT',
+                'BNB/USDT', 'AVAX/USDT', 'DOT/USDT', 'LINK/USDT',
+                'ATOM/USDT', 'XRP/USDT', 'DOGE/USDT', 'LTC/USDT',
+                'BCH/USDT', 'ALGO/USDT'
             ]
 
             result = [s for s in default_symbols if s in symbols]
