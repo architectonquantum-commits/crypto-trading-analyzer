@@ -1,0 +1,413 @@
+"""
+Journal Service - Business logic for trading journal.
+"""
+
+import json
+from datetime import date, datetime
+from typing import Optional
+import aiosqlite
+
+
+# ==========================================
+# VALIDACIONES
+# ==========================================
+
+def validate_trade_coherence(operacion: str, precio_entrada: float, stop_loss: float, take_profit: Optional[float]):
+    """Valida coherencia de precios según tipo de operación."""
+    if operacion == "LONG":
+        if stop_loss >= precio_entrada:
+            raise ValueError("En LONG, el SL debe ser menor que el Entry")
+        if take_profit and take_profit <= precio_entrada:
+            raise ValueError("En LONG, el TP debe ser mayor que el Entry")
+
+    elif operacion == "SHORT":
+        if stop_loss <= precio_entrada:
+            raise ValueError("En SHORT, el SL debe ser mayor que el Entry")
+        if take_profit and take_profit >= precio_entrada:
+            raise ValueError("En SHORT, el TP debe ser menor que el Entry")
+
+
+# ==========================================
+# CRUD OPERATIONS
+# ==========================================
+
+async def create_journal_entry_from_signal(
+    db: aiosqlite.Connection,
+    signal_data: dict,
+    user_context: dict,
+    user_id: str = "default_user"
+) -> str:
+    """Crear entrada desde validación de señal (FLUJO PRINCIPAL)."""
+    validate_trade_coherence(
+        signal_data["operacion"],
+        signal_data["precio_entrada"],
+        signal_data["stop_loss"],
+        signal_data.get("take_profit_1")
+    )
+
+    # Convertir objetos complejos a JSON
+    analisis_completo_json = json.dumps(signal_data["analisis_completo"], ensure_ascii=False)
+    tamano_posicion_json = json.dumps(signal_data.get("tamano_posicion"), ensure_ascii=False) if signal_data.get("tamano_posicion") else None
+
+    query = """
+        INSERT INTO trading_journal (
+            user_id, estado_emocional, razon_estado, sesion, riesgo_diario_permitido,
+            activo, tipo_activo, operacion, precio_entrada, stop_loss,
+            take_profit_1, take_profit_2, take_profit_3, beneficio_esperado_porcentaje,
+            capital_usado, riesgo_porcentaje, tamano_posicion, apalancamiento_usado,
+            margen_bloqueado, rr_ratio,
+            score_tecnico, score_estructura, score_riesgo, score_macro, score_sentimiento,
+            score_total, confluencia_porcentaje, recomendacion,
+            analisis_completo
+        ) VALUES (
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?,
+            ?, ?, ?, ?,
+            ?, ?,
+            ?, ?, ?, ?, ?,
+            ?, ?, ?,
+            ?
+        )
+    """
+
+    values = (
+        user_id,
+        user_context["estado_emocional"],
+        user_context["razon_estado"],
+        user_context.get("sesion"),
+        user_context.get("riesgo_diario_permitido", 2.0),
+
+        signal_data["activo"],
+        signal_data.get("tipo_activo", "crypto"),
+        signal_data["operacion"],
+        signal_data["precio_entrada"],
+        signal_data["stop_loss"],
+        signal_data.get("take_profit_1"),
+        signal_data.get("take_profit_2"),
+        signal_data.get("take_profit_3"),
+        signal_data.get("beneficio_esperado_porcentaje"),
+
+        signal_data.get("capital_usado"),
+        signal_data.get("riesgo_porcentaje"),
+        tamano_posicion_json,  # ← CORREGIDO: Ahora es JSON
+        signal_data.get("apalancamiento_usado"),
+        signal_data.get("margen_bloqueado"),
+        signal_data.get("rr_ratio"),
+
+        signal_data.get("score_tecnico"),
+        signal_data.get("score_estructura"),
+        signal_data.get("score_riesgo"),
+        signal_data.get("score_macro"),
+        signal_data.get("score_sentimiento"),
+        signal_data.get("score_total"),
+        signal_data.get("confluencia_porcentaje"),
+        signal_data.get("recomendacion"),
+
+        analisis_completo_json
+    )
+
+    cursor = await db.execute(query, values)
+    await db.commit()
+
+    entry_id = cursor.lastrowid
+    result = await db.execute("SELECT id FROM trading_journal WHERE rowid = ?", (entry_id,))
+    row = await result.fetchone()
+
+    return row[0] if row else None
+
+
+async def create_journal_entry_manual(
+    db: aiosqlite.Connection,
+    entry_data: dict,
+    user_id: str = "default_user"
+) -> str:
+    """Crear entrada manual (sin validador)."""
+    validate_trade_coherence(
+        entry_data["operacion"],
+        entry_data["precio_entrada"],
+        entry_data["stop_loss"],
+        entry_data.get("take_profit_1")
+    )
+
+    analisis_completo = {"manual": True, "note": "Entrada manual sin análisis automático"}
+    analisis_json = json.dumps(analisis_completo, ensure_ascii=False)
+
+    query = """
+        INSERT INTO trading_journal (
+            user_id, estado_emocional, razon_estado, sesion, riesgo_diario_permitido,
+            activo, operacion, precio_entrada, stop_loss, take_profit_1,
+            analisis_completo
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+
+    values = (
+        user_id,
+        entry_data["estado_emocional"],
+        entry_data["razon_estado"],
+        entry_data.get("sesion"),
+        entry_data.get("riesgo_diario_permitido", 2.0),
+        entry_data["activo"],
+        entry_data["operacion"],
+        entry_data["precio_entrada"],
+        entry_data["stop_loss"],
+        entry_data.get("take_profit_1"),
+        analisis_json
+    )
+
+    cursor = await db.execute(query, values)
+    await db.commit()
+
+    entry_id = cursor.lastrowid
+    result = await db.execute("SELECT id FROM trading_journal WHERE rowid = ?", (entry_id,))
+    row = await result.fetchone()
+
+    return row[0] if row else None
+
+
+async def get_journal_entry(db: aiosqlite.Connection, entry_id: str) -> Optional[dict]:
+    """Obtener entrada específica por ID."""
+    query = "SELECT * FROM trading_journal WHERE id = ?"
+    cursor = await db.execute(query, (entry_id,))
+    row = await cursor.fetchone()
+
+    if not row:
+        return None
+
+    entry = dict(row)
+
+    if entry.get("analisis_completo"):
+        entry["analisis_completo"] = json.loads(entry["analisis_completo"])
+
+    return entry
+
+
+async def list_journal_entries(
+    db: aiosqlite.Connection,
+    user_id: str = "default_user",
+    page: int = 1,
+    limit: int = 50,
+    activo: Optional[str] = None,
+    resultado: Optional[str] = None,
+    estatus: Optional[str] = None
+) -> tuple[list[dict], int]:
+    """Listar entradas con filtros y paginación."""
+    where_clauses = ["user_id = ?"]
+    params = [user_id]
+
+    if activo:
+        where_clauses.append("activo = ?")
+        params.append(activo)
+
+    if resultado:
+        where_clauses.append("resultado = ?")
+        params.append(resultado)
+
+    if estatus:
+        where_clauses.append("estatus = ?")
+        params.append(estatus)
+
+    where_sql = " AND ".join(where_clauses)
+
+    count_query = f"SELECT COUNT(*) FROM trading_journal WHERE {where_sql}"
+    cursor = await db.execute(count_query, params)
+    total = (await cursor.fetchone())[0]
+
+    offset = (page - 1) * limit
+    query = f"""
+        SELECT * FROM trading_journal 
+        WHERE {where_sql}
+        ORDER BY fecha_operacion DESC, created_at DESC
+        LIMIT ? OFFSET ?
+    """
+    params.extend([limit, offset])
+
+    cursor = await db.execute(query, params)
+    rows = await cursor.fetchall()
+
+    entries = []
+    for row in rows:
+        entry = dict(row)
+        entry.pop("analisis_completo", None)
+        entries.append(entry)
+
+    return entries, total
+
+
+async def close_trade(
+    db: aiosqlite.Connection,
+    entry_id: str,
+    close_data: dict
+) -> bool:
+    """Cerrar un trade (POST-TRADE)."""
+    query = """
+        UPDATE trading_journal
+        SET estatus = 'Cerrado',
+            fecha_finalizacion = ?,
+            resultado = ?,
+            tp_alcanzado = ?,
+            ganancia_perdida_real = ?,
+            observaciones_cierre = ?,
+            estado_emocional_post = ?
+        WHERE id = ?
+    """
+
+    values = (
+        close_data.get("fecha_finalizacion") or date.today().isoformat(),
+        close_data["resultado"],
+        close_data.get("tp_alcanzado"),
+        close_data["ganancia_perdida_real"],
+        close_data.get("observaciones_cierre"),
+        close_data.get("estado_emocional_post"),
+        entry_id
+    )
+
+    await db.execute(query, values)
+    await db.commit()
+
+    return True
+
+
+async def delete_journal_entry(db: aiosqlite.Connection, entry_id: str) -> bool:
+    """Eliminar entrada."""
+    query = "DELETE FROM trading_journal WHERE id = ?"
+    await db.execute(query, (entry_id,))
+    await db.commit()
+    return True
+
+
+# ==========================================
+# ESTADÍSTICAS
+# ==========================================
+
+async def get_journal_stats(db: aiosqlite.Connection, user_id: str = "default_user") -> dict:
+    """Obtener métricas generales."""
+    query = """
+        SELECT 
+            COUNT(*) as total_trades,
+            SUM(CASE WHEN estatus = 'Abierto' THEN 1 ELSE 0 END) as trades_abiertos,
+            SUM(CASE WHEN estatus = 'Cerrado' THEN 1 ELSE 0 END) as trades_cerrados,
+            SUM(CASE WHEN resultado = 'Ganado' THEN 1 ELSE 0 END) as trades_ganados,
+            SUM(CASE WHEN resultado = 'Perdido' THEN 1 ELSE 0 END) as trades_perdidos,
+            SUM(CASE WHEN resultado = 'Ganado' THEN ganancia_perdida_real ELSE 0 END) as total_ganado,
+            SUM(CASE WHEN resultado = 'Perdido' THEN ganancia_perdida_real ELSE 0 END) as total_perdido,
+            AVG(CASE WHEN estatus = 'Cerrado' THEN rr_ratio ELSE NULL END) as promedio_rr
+        FROM trading_journal
+        WHERE user_id = ?
+    """
+
+    cursor = await db.execute(query, (user_id,))
+    row = await cursor.fetchone()
+
+    if not row:
+        return {}
+
+    stats = dict(row)
+
+    cerrados = stats.get("trades_cerrados", 0)
+    ganados = stats.get("trades_ganados", 0)
+    stats["win_rate"] = (ganados / cerrados * 100) if cerrados > 0 else 0
+
+    total_ganado = abs(stats.get("total_ganado", 0))
+    total_perdido = abs(stats.get("total_perdido", 0))
+    stats["profit_factor"] = (total_ganado / total_perdido) if total_perdido > 0 else 0
+
+    stats["ganancia_neta"] = total_ganado + total_perdido
+
+    # Convertir None a 0.0 para promedio_rr
+    stats["promedio_rr"] = round(stats.get("promedio_rr") or 0.0, 2)
+
+    stats["mejor_racha"] = 0
+    stats["peor_racha"] = 0
+
+    return stats
+async def list_journal_entries(
+    db,
+    page: int = 1,
+    limit: int = 50,
+    activo: str = None,
+    resultado: str = None,
+    estatus: str = None,
+    fecha_desde: str = None,
+    fecha_hasta: str = None,
+    confluencias: str = None
+):
+    """
+    Listar entradas con filtros avanzados.
+    """
+    offset = (page - 1) * limit
+    
+    # Query base
+    query = "SELECT * FROM journal_entries WHERE 1=1"
+    params = []
+    
+    # Aplicar filtros
+    if activo:
+        # Buscar en el campo activo (puede contener LONG o SHORT)
+        query += " AND (activo LIKE ? OR activo LIKE ?)"
+        params.extend([f"%{activo}%", f"{activo} %"])
+    
+    if resultado:
+        query += " AND resultado = ?"
+        params.append(resultado)
+    
+    if estatus:
+        query += " AND estatus = ?"
+        params.append(estatus)
+    
+    if fecha_desde:
+        query += " AND fecha_operacion >= ?"
+        params.append(fecha_desde)
+    
+    if fecha_hasta:
+        query += " AND fecha_operacion <= ?"
+        params.append(fecha_hasta)
+    
+    # Filtro de confluencias
+    if confluencias:
+        if confluencias == 'alta':
+            query += " AND confluencia_porcentaje > 70"
+        elif confluencias == 'media':
+            query += " AND confluencia_porcentaje >= 55 AND confluencia_porcentaje <= 70"
+        elif confluencias == 'baja':
+            query += " AND confluencia_porcentaje < 55"
+    
+    # Ordenar y paginar
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    
+    # Ejecutar query
+    cursor = await db.execute(query, params)
+    rows = await cursor.fetchall()
+    
+    # Contar total (mismos filtros sin limit/offset)
+    count_query = "SELECT COUNT(*) FROM journal_entries WHERE 1=1"
+    count_params = params[:-2]  # Remover limit y offset
+    
+    if activo:
+        count_query += " AND (activo LIKE ? OR activo LIKE ?)"
+    if resultado:
+        count_query += " AND resultado = ?"
+    if estatus:
+        count_query += " AND estatus = ?"
+    if fecha_desde:
+        count_query += " AND fecha_operacion >= ?"
+    if fecha_hasta:
+        count_query += " AND fecha_operacion <= ?"
+    if confluencias:
+        if confluencias == 'alta':
+            count_query += " AND confluencia_porcentaje > 70"
+        elif confluencias == 'media':
+            count_query += " AND confluencia_porcentaje >= 55 AND confluencia_porcentaje <= 70"
+        elif confluencias == 'baja':
+            count_query += " AND confluencia_porcentaje < 55"
+    
+    count_cursor = await db.execute(count_query, count_params)
+    total = (await count_cursor.fetchone())[0]
+    
+    # Convertir a dict
+    entries = []
+    for row in rows:
+        entries.append(dict(row))
+    
+    return entries, total

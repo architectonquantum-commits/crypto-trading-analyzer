@@ -5,12 +5,17 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
-    port: 5000,
-    strictPort: false,
+    port: 5173,
+    allowedHosts: [
+      '.replit.dev',
+      'localhost',
+      '127.0.0.1'
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        secure: false,
       }
     }
   }

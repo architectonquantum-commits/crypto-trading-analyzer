@@ -1,0 +1,152 @@
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { X } from 'lucide-react';
+import { Button, Select, TextArea } from '../shared';
+import useJournalStore from '../../store/journalStore';
+import { EMOTIONAL_STATES, TRADING_SESSIONS } from '../../utils/constants';
+
+export default function SaveToJournalModal({ isOpen, onClose, signalData }) {
+  // SIEMPRE ejecutar hooks primero
+  const navigate = useNavigate();
+  const { createFromSignal } = useJournalStore();
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    defaultValues: {
+      estado_emocional: 'Normal',
+      sesion: 'Londres',
+      notas_pre_entrada: '',
+      razon_entrada: '',
+    }
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  // DESPUÉS de los hooks, decidir si renderizar
+  if (!isOpen || !signalData) return null;
+
+  const signalInput = signalData.signal_input || {};
+  const confluenceScore = signalData.scores?.percentage || 0;
+
+  const onSubmit = async (formData) => {
+    try {
+      await createFromSignal(signalData, {
+        estado_emocional: formData.estado_emocional,
+        sesion: formData.sesion,
+        notas_pre_entrada: formData.notas_pre_entrada || null,
+        razon_entrada: formData.razon_entrada,
+      });
+      
+      onClose();
+      navigate('/journal');
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div 
+        className="absolute inset-0 bg-black/80"
+        onClick={onClose}
+      />
+      
+      <div className="relative bg-slate-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-slate-700 sticky top-0 bg-slate-800 z-10">
+          <h2 className="text-2xl font-bold">📓 Guardar en Bitácora</h2>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors"
+            type="button"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+          <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+            <h4 className="font-semibold mb-2">Señal a Guardar:</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-slate-400">Activo:</span>
+                <span className="ml-2 font-bold">{signalInput.symbol}</span>
+              </div>
+              <div>
+                <span className="text-slate-400">Tipo:</span>
+                <span className={`ml-2 font-bold ${
+                  signalInput.direction === 'LONG' ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {signalInput.direction}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400">Entrada:</span>
+                <span className="ml-2 font-bold">${signalInput.entry_price}</span>
+              </div>
+              <div>
+                <span className="text-slate-400">Confluencias:</span>
+                <span className="ml-2 font-bold text-green-400">{confluenceScore}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Select
+              label="¿Cómo te sientes?"
+              {...register('estado_emocional', { required: true })}
+              options={EMOTIONAL_STATES}
+            />
+
+            <Select
+              label="Sesión de Trading"
+              {...register('sesion', { required: true })}
+              options={TRADING_SESSIONS}
+            />
+
+            <TextArea
+              label="¿Por qué entras a esta operación?"
+              placeholder="Ej: Vi confluencia de CHoCH + FVG..."
+              rows={3}
+              {...register('razon_entrada', { 
+                required: 'Campo requerido',
+                minLength: { value: 20, message: 'Mínimo 20 caracteres' }
+              })}
+              error={errors.razon_entrada?.message}
+            />
+
+            <TextArea
+              label="Notas Adicionales (Opcional)"
+              placeholder="Observaciones..."
+              rows={2}
+              {...register('notas_pre_entrada')}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-600">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="success"
+              loading={isSubmitting}
+            >
+              💾 Guardar Trade
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
