@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { validatorApi } from '../services/validatorApi';
+import { validateSignalManual } from '../services/validatorApi';
 import toast from 'react-hot-toast';
 
 const useValidatorStore = create((set) => ({
@@ -10,7 +10,7 @@ const useValidatorStore = create((set) => ({
   validateSignal: async (signalData) => {
     set({ loading: true, error: null, validationResult: null });
     try {
-      const result = await validatorApi.validateSignal(signalData);
+      const result = await validateSignalManual(signalData);
       set({ validationResult: result, loading: false });
       toast.success('Señal validada correctamente');
       return result;

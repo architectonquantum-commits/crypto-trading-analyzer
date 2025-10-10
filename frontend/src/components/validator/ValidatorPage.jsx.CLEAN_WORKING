@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, AlertCircle, TrendingUp, CheckCircle, XCircle, BarChart3, Activity } from 'lucide-react';
-import AdvancedBacktestTab from './advanced/AdvancedBacktestTab';
+import { FileText, AlertCircle, TrendingUp, CheckCircle, XCircle, BarChart3 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Button, Input, Select, LoadingSpinner } from '../shared';
 import EquityCurveChart from './EquityCurveChart';
 import useValidatorStore from '../../store/validatorStore';
 import SaveToJournalModal from './SaveToJournalModal';
-import EntryContextCard from './EntryContextCard';
-import { entryContextApi } from '../../services/entryContextApi';
+import BacktestResults from '../backtest/BacktestResults';
+import backtestApi from '../../services/backtestApi';
 import toast from 'react-hot-toast';
-import { validateBreakout } from '../../services/validatorApi';
 
 const CRYPTO_PAIRS = [
   'BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'SOL/USDT', 'ADA/USDT',
@@ -25,11 +23,8 @@ export default function ValidatorPage() {
   const navigate = useNavigate();
   const { validationResult, loading, validateSignal } = useValidatorStore();
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('validation');
-  const [entryContext, setEntryContext] = useState(null);
-  const [contextLoading, setContextLoading] = useState(false);
-  const [breakoutResult, setBreakoutResult] = useState(null);
-  const [breakoutLoading, setBreakoutLoading] = useState(false);
+  const [backtestData, setBacktestData] = useState(null);
+  const [backtestLoading, setBacktestLoading] = useState(false);
   
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
     defaultValues: {
@@ -46,7 +41,7 @@ export default function ValidatorPage() {
   const currentTimeframe = watch('timeframe');
 
   useEffect(() => {
-if (location.state?.fromScanner && location.state?.prefilledData) {
+    if (location.state?.fromScanner && location.state?.prefilledData) {
       const data = location.state.prefilledData;
       if (data.activo) setValue('activo', data.activo);
       if (data.direccion) setValue('direccion', data.direccion);
@@ -58,46 +53,27 @@ if (location.state?.fromScanner && location.state?.prefilledData) {
     }
   }, [location, setValue]);
 
-
-
-
-  const analyzeEntryContext = async (signalData) => {
-    if (!signalData.symbol || !signalData.entry_price || !signalData.direction) {
-      return;
+  useEffect(() => {
+    if (currentSymbol) {
+      loadBacktest(currentSymbol, currentTimeframe);
     }
+  }, [currentSymbol, currentTimeframe]);
 
-    setContextLoading(true);
+  const loadBacktest = async (symbol, timeframe) => {
+    setBacktestLoading(true);
     try {
-      const context = await entryContextApi.analyzeContext({
-        symbol: signalData.symbol,
-        entry_price: signalData.entry_price,
-        direction: signalData.direction,
-        timeframe: signalData.timeframe
-      });
-      setEntryContext(context);
+      const data = await backtestApi.runBacktest(symbol, timeframe, 100);
+      setBacktestData(data);
     } catch (error) {
-      console.error('Error analizando contexto:', error);
-      setEntryContext({
-        type: 'error',
-        confidence: 0,
-        description: 'Error al analizar contexto',
-        icon: '❌'
-      });
+      console.error('Error loading backtest:', error);
+      toast.error('No se pudo cargar el backtesting');
     } finally {
-      setContextLoading(false);
+      setBacktestLoading(false);
     }
   };
 
   const onSubmit = async (data) => {
     try {
-      // Analizar contexto de entrada
-      await analyzeEntryContext({
-        symbol: data.activo,
-        entry_price: parseFloat(data.precio_entrada),
-        direction: data.direccion,
-        timeframe: data.timeframe
-      });
-
       await validateSignal({
         symbol: data.activo,
         entry_price: parseFloat(data.precio_entrada),
@@ -111,39 +87,6 @@ if (location.state?.fromScanner && location.state?.prefilledData) {
       toast.success('Señal validada correctamente');
     } catch (error) {
       toast.error('Error al validar señal');
-    }
-  };
-
-
-  const handleValidateBreakout = async () => {
-    const formData = watch();
-    
-    if (!formData.activo || !formData.precio_entrada) {
-      toast.error('Completa símbolo y precio de entrada primero');
-      return;
-    }
-    
-    setBreakoutLoading(true);
-    
-    try {
-      // Usar precio de entrada como resistencia (simplificado)
-      // En producción, esto vendría del análisis técnico
-      const resistancePrice = parseFloat(formData.precio_entrada) * 0.98; // 2% abajo como ejemplo
-      
-      const result = await validateBreakout(
-        formData.activo,
-        formData.timeframe || '1h',
-        parseFloat(formData.precio_entrada),
-        resistancePrice
-      );
-      
-      setBreakoutResult(result);
-      toast.success('Validación de ruptura completada');
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Error al validar ruptura técnica');
-    } finally {
-      setBreakoutLoading(false);
     }
   };
 
@@ -181,35 +124,6 @@ if (location.state?.fromScanner && location.state?.prefilledData) {
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-slate-800 rounded-lg p-1 flex gap-1">
-        <button
-          onClick={() => setActiveTab('validation')}
-          className={`flex-1 px-4 py-3 rounded font-semibold transition-all ${
-            activeTab === 'validation'
-              ? 'bg-blue-600 text-white'
-              : 'text-slate-400 hover:text-white hover:bg-slate-700'
-          }`}
-        >
-          <FileText className="inline mr-2" size={20} />
-          Validación
-        </button>
-        <button
-          onClick={() => setActiveTab('advanced')}
-          className={`flex-1 px-4 py-3 rounded font-semibold transition-all ${
-            activeTab === 'advanced'
-              ? 'bg-blue-600 text-white'
-              : 'text-slate-400 hover:text-white hover:bg-slate-700'
-          }`}
-        >
-          <Activity className="inline mr-2" size={20} />
-          Backtesting Avanzado
-        </button>
-      </div>
-
-
-      {activeTab === 'validation' && (
-        <>
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-slate-800 rounded-lg p-6">
           <h2 className="text-xl font-bold mb-4">Datos de la Señal</h2>
@@ -283,15 +197,6 @@ if (location.state?.fromScanner && location.state?.prefilledData) {
               <Button type="button" variant="secondary" onClick={handleReset}>
                 Limpiar
               </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleValidateBreakout}
-                loading={breakoutLoading}
-                className="flex-1"
-              >
-                🔍 Validar Ruptura
-              </Button>
             </div>
           </form>
         </div>
@@ -324,12 +229,6 @@ if (location.state?.fromScanner && location.state?.prefilledData) {
                   {validationResult.scores?.total}/{validationResult.scores?.max_possible} puntos
                 </p>
               </div>
-
-              {/* Contexto de Entrada */}
-              <EntryContextCard 
-                context={entryContext} 
-                loading={contextLoading}
-              />
 
               <div className="space-y-2">
                 <h3 className="font-semibold text-slate-300">Análisis por Módulo:</h3>
@@ -377,74 +276,20 @@ if (location.state?.fromScanner && location.state?.prefilledData) {
         </div>
       </div>
 
-        
-        {/* Card de Resultados de Ruptura Técnica */}
-        {breakoutResult && (
-          <div className="bg-slate-800 rounded-lg p-6 mt-6">
-            <h2 className="text-xl font-bold mb-4">🔍 Validación de Ruptura Técnica</h2>
-            
-            <div className={`text-center p-6 rounded-lg mb-4 ${
-              breakoutResult.recommendation === 'STRONG_BREAKOUT' ? 'bg-green-900/30 border-2 border-green-600' :
-              breakoutResult.recommendation === 'GOOD_BREAKOUT' ? 'bg-blue-900/30 border-2 border-blue-600' :
-              breakoutResult.recommendation === 'WEAK_BREAKOUT' ? 'bg-yellow-900/30 border-2 border-yellow-600' :
-              'bg-red-900/30 border-2 border-red-600'
-            }`}>
-              <p className="text-sm text-slate-300 mb-1">Score Total:</p>
-              <p className="text-3xl font-bold text-white">
-                {breakoutResult.total_score}/{breakoutResult.max_score}
-              </p>
-              <p className="text-lg text-slate-300 mt-2">
-                {breakoutResult.score_percentage}% - {breakoutResult.confidence}
-              </p>
-              <p className="text-sm text-slate-400 mt-2">
-                {breakoutResult?.recommendation?.replace('_', ' ')}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="font-semibold text-slate-300 mb-3">Criterios de Validación:</h3>
-              
-              <div className="flex justify-between items-center p-3 bg-slate-700 rounded">
-                <span>🚧 Ruptura de Resistencia</span>
-                <span className="font-bold">
-                  {breakoutResult?.criteria?.criterion_1_resistance_breakout?.score}/2
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-slate-700 rounded">
-                <span>📊 RSI (50-70)</span>
-                <span className="font-bold">
-                  {breakoutResult?.criteria?.criterion_2_rsi?.score}/2
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-slate-700 rounded">
-                <span>📈 MACD Cruce Alcista</span>
-                <span className="font-bold">
-                  {breakoutResult?.criteria?.criterion_3_macd?.score}/2
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-slate-700 rounded">
-                <span>📉 Precio &gt; EMA 21</span>
-                <span className="font-bold">
-                  {breakoutResult?.criteria?.criterion_4_ema?.score}/2
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-slate-700 rounded">
-                <span>🔊 Volumen &gt; Promedio</span>
-                <span className="font-bold">
-                  {breakoutResult?.criteria?.criterion_5_volume_trend?.score}/2
-                </span>
+      {currentSymbol && (
+        <div>
+          {backtestLoading ? (
+            <div className="bg-slate-800 rounded-lg p-12">
+              <div className="flex flex-col items-center justify-center">
+                <LoadingSpinner size="lg" />
+                <p className="text-slate-400 mt-4">Calculando backtesting histórico...</p>
               </div>
             </div>
-
-            <div className="mt-4 p-4 bg-slate-700 rounded-lg">
-              <p className="text-sm text-slate-300">{breakoutResult.summary}</p>
-            </div>
-          </div>
-        )}
+          ) : backtestData ? (
+            <BacktestResults data={backtestData} />
+          ) : null}
+        </div>
+      )}
 
       {showSaveModal && (
         <SaveToJournalModal
@@ -455,12 +300,6 @@ if (location.state?.fromScanner && location.state?.prefilledData) {
       )}
       
       <EquityCurveChart />
-        </>
-      )}
-
-      {activeTab === 'advanced' && (
-        <AdvancedBacktestTab validationResult={validationResult} />
-      )}
     </div>
   );
 }
