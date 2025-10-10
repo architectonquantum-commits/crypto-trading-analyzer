@@ -8,11 +8,13 @@ Servicio de Backtesting Avanzado
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+from dataclasses import asdict
 from typing import List, Dict, Tuple
 import random
 
 from app.services.historical_data_loader import get_historical_loader
 from app.services.trading_costs import get_trading_costs
+from app.services.backtest_reality_check import get_reality_checker
 from app.models.backtest_advanced import (
     BacktestAdvancedRequest,
     BacktestAdvancedResponse,
@@ -102,6 +104,12 @@ class BacktestAdvancedService:
         # Equity curve
         equity_curve = self._build_equity_curve(all_trades, request.initial_capital)
         
+        # Reality Check
+        reality_check = get_reality_checker().analyze(
+            metrics=advanced_metrics.dict(),
+            num_trades=len(all_trades)
+        )
+        
         return BacktestAdvancedResponse(
             advanced_metrics=advanced_metrics,
             walk_forward_periods=walk_forward_result['periods'],
@@ -113,7 +121,8 @@ class BacktestAdvancedService:
             worst_weekday=weekday_analysis['worst'],
             equity_curve=equity_curve,
             total_trades=len(all_trades),
-            trades_sample=all_trades[:50]
+            trades_sample=all_trades[:50],
+            reality_check=asdict(reality_check)
         )
     
     async def _run_monte_carlo(
