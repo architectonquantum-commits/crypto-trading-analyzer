@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, AlertCircle, TrendingUp, CheckCircle, XCircle, BarChart3 } from 'lucide-react';
+import { FileText, AlertCircle, TrendingUp, CheckCircle, XCircle, BarChart3, Activity } from 'lucide-react';
+import AdvancedBacktestTab from './advanced/AdvancedBacktestTab';
 import { useForm } from 'react-hook-form';
 import { Button, Input, Select, LoadingSpinner } from '../shared';
 import EquityCurveChart from './EquityCurveChart';
 import useValidatorStore from '../../store/validatorStore';
 import SaveToJournalModal from './SaveToJournalModal';
-import BacktestResults from '../backtest/BacktestResults';
-import backtestApi from '../../services/backtestApi';
+import EntryContextCard from './EntryContextCard';
+import { entryContextApi } from '../../services/entryContextApi';
 import toast from 'react-hot-toast';
 
 const CRYPTO_PAIRS = [
@@ -23,8 +24,9 @@ export default function ValidatorPage() {
   const navigate = useNavigate();
   const { validationResult, loading, validateSignal } = useValidatorStore();
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [backtestData, setBacktestData] = useState(null);
-  const [backtestLoading, setBacktestLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('validation');
+  const [entryContext, setEntryContext] = useState(null);
+  const [contextLoading, setContextLoading] = useState(false);
   
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
     defaultValues: {
@@ -41,43 +43,58 @@ export default function ValidatorPage() {
   const currentTimeframe = watch('timeframe');
 
   useEffect(() => {
-    if (location.state?.fromScanner && location.state?.prefilledData) {
+if (location.state?.fromScanner && location.state?.prefilledData) {
       const data = location.state.prefilledData;
-      
       if (data.activo) setValue('activo', data.activo);
       if (data.direccion) setValue('direccion', data.direccion);
       if (data.precio_entrada) setValue('precio_entrada', data.precio_entrada);
       if (data.stop_loss) setValue('stop_loss', data.stop_loss);
       if (data.take_profit) setValue('take_profit', data.take_profit);
-      
-      toast.success(`📊 Datos completos cargados: ${data.activo}`);
-      
+      toast.success(`📊 Datos cargados: ${data.activo}`);
       window.history.replaceState({}, document.title);
     }
   }, [location, setValue]);
 
-  // 🆕 Auto-cargar backtesting cuando cambia el símbolo
-  useEffect(() => {
-    if (currentSymbol) {
-      loadBacktest(currentSymbol, currentTimeframe);
-    }
-  }, [currentSymbol, currentTimeframe]);
 
-  const loadBacktest = async (symbol, timeframe) => {
-    setBacktestLoading(true);
+
+
+  const analyzeEntryContext = async (signalData) => {
+    if (!signalData.symbol || !signalData.entry_price || !signalData.direction) {
+      return;
+    }
+
+    setContextLoading(true);
     try {
-      const data = await backtestApi.runBacktest(symbol, timeframe, 100);
-      setBacktestData(data);
+      const context = await entryContextApi.analyzeContext({
+        symbol: signalData.symbol,
+        entry_price: signalData.entry_price,
+        direction: signalData.direction,
+        timeframe: signalData.timeframe
+      });
+      setEntryContext(context);
     } catch (error) {
-      console.error('Error loading backtest:', error);
-      toast.error('No se pudo cargar el backtesting');
+      console.error('Error analizando contexto:', error);
+      setEntryContext({
+        type: 'error',
+        confidence: 0,
+        description: 'Error al analizar contexto',
+        icon: '❌'
+      });
     } finally {
-      setBacktestLoading(false);
+      setContextLoading(false);
     }
   };
 
   const onSubmit = async (data) => {
     try {
+      // Analizar contexto de entrada
+      await analyzeEntryContext({
+        symbol: data.activo,
+        entry_price: parseFloat(data.precio_entrada),
+        direction: data.direccion,
+        timeframe: data.timeframe
+      });
+
       await validateSignal({
         symbol: data.activo,
         entry_price: parseFloat(data.precio_entrada),
@@ -128,6 +145,35 @@ export default function ValidatorPage() {
         </p>
       </div>
 
+      {/* Tabs */}
+      <div className="bg-slate-800 rounded-lg p-1 flex gap-1">
+        <button
+          onClick={() => setActiveTab('validation')}
+          className={`flex-1 px-4 py-3 rounded font-semibold transition-all ${
+            activeTab === 'validation'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700'
+          }`}
+        >
+          <FileText className="inline mr-2" size={20} />
+          Validación
+        </button>
+        <button
+          onClick={() => setActiveTab('advanced')}
+          className={`flex-1 px-4 py-3 rounded font-semibold transition-all ${
+            activeTab === 'advanced'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700'
+          }`}
+        >
+          <Activity className="inline mr-2" size={20} />
+          Backtesting Avanzado
+        </button>
+      </div>
+
+
+      {activeTab === 'validation' && (
+        <>
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-slate-800 rounded-lg p-6">
           <h2 className="text-xl font-bold mb-4">Datos de la Señal</h2>
@@ -136,7 +182,7 @@ export default function ValidatorPage() {
             <div className="mb-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg">
               <p className="text-sm text-blue-300 flex items-center gap-2">
                 <TrendingUp size={16} />
-                ✅ Datos cargados automáticamente desde Scanner (con SL/TP calculados por ATR)
+                ✅ Datos cargados desde Scanner
               </p>
             </div>
           )}
@@ -155,21 +201,17 @@ export default function ValidatorPage() {
 
             <Select
               label="Dirección"
-              {...register('direccion', { required: 'Campo requerido' })}
+              {...register('direccion')}
             >
-              <option value="LONG">LONG (Compra)</option>
-              <option value="SHORT">SHORT (Venta)</option>
+              <option value="LONG">LONG</option>
+              <option value="SHORT">SHORT</option>
             </Select>
 
             <Input
               label="Precio de Entrada"
               type="number"
               step="0.01"
-              placeholder="Ej: 45000.00"
-              {...register('precio_entrada', { 
-                required: 'Campo requerido',
-                min: { value: 0.01, message: 'Debe ser mayor a 0' }
-              })}
+              {...register('precio_entrada', { required: 'Campo requerido' })}
               error={errors.precio_entrada?.message}
             />
 
@@ -177,11 +219,7 @@ export default function ValidatorPage() {
               label="Stop Loss"
               type="number"
               step="0.01"
-              placeholder="Ej: 44000.00"
-              {...register('stop_loss', { 
-                required: 'Campo requerido',
-                min: { value: 0.01, message: 'Debe ser mayor a 0' }
-              })}
+              {...register('stop_loss', { required: 'Campo requerido' })}
               error={errors.stop_loss?.message}
             />
 
@@ -189,11 +227,7 @@ export default function ValidatorPage() {
               label="Take Profit"
               type="number"
               step="0.01"
-              placeholder="Ej: 48000.00"
-              {...register('take_profit', { 
-                required: 'Campo requerido',
-                min: { value: 0.01, message: 'Debe ser mayor a 0' }
-              })}
+              {...register('take_profit', { required: 'Campo requerido' })}
               error={errors.take_profit?.message}
             />
 
@@ -206,22 +240,11 @@ export default function ValidatorPage() {
               <option value="1d">1 Día</option>
             </Select>
 
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="submit"
-                variant="primary"
-                className="flex-1"
-                loading={loading}
-                disabled={loading}
-              >
+            <div className="flex gap-3">
+              <Button type="submit" loading={loading} className="flex-1">
                 Validar Señal
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleReset}
-                disabled={loading}
-              >
+              <Button type="button" variant="secondary" onClick={handleReset}>
                 Limpiar
               </Button>
             </div>
@@ -229,10 +252,10 @@ export default function ValidatorPage() {
         </div>
 
         <div className="bg-slate-800 rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4">Resultado del Análisis</h2>
-
+          <h2 className="text-xl font-bold mb-4">Resultados</h2>
+          
           {loading ? (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex justify-center items-center h-64">
               <LoadingSpinner size="lg" />
             </div>
           ) : validationResult ? (
@@ -256,6 +279,12 @@ export default function ValidatorPage() {
                   {validationResult.scores?.total}/{validationResult.scores?.max_possible} puntos
                 </p>
               </div>
+
+              {/* Contexto de Entrada */}
+              <EntryContextCard 
+                context={entryContext} 
+                loading={contextLoading}
+              />
 
               <div className="space-y-2">
                 <h3 className="font-semibold text-slate-300">Análisis por Módulo:</h3>
@@ -303,21 +332,6 @@ export default function ValidatorPage() {
         </div>
       </div>
 
-      {/* 🆕 SECCIÓN DE BACKTESTING */}
-      {currentSymbol && (
-        <div>
-          {backtestLoading ? (
-            <div className="bg-slate-800 rounded-lg p-12">
-              <div className="flex flex-col items-center justify-center">
-                <LoadingSpinner size="lg" />
-                <p className="text-slate-400 mt-4">Calculando backtesting histórico...</p>
-              </div>
-            </div>
-          ) : backtestData ? (
-            <BacktestResults data={backtestData} />
-          ) : null}
-        </div>
-      )}
 
       {showSaveModal && (
         <SaveToJournalModal
@@ -327,12 +341,13 @@ export default function ValidatorPage() {
         />
       )}
       
-      {/* Equity Curve */}
       <EquityCurveChart />
+        </>
+      )}
 
+      {activeTab === 'advanced' && (
+        <AdvancedBacktestTab validationResult={validationResult} />
+      )}
     </div>
-      
-      
   );
-
 }
