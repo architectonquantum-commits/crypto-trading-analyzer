@@ -38,3 +38,11 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+# Backtesting Avanzado
+from app.api.endpoints import backtest_advanced
+app.include_router(
+    backtest_advanced.router,
+    prefix="/api/backtest",
+    tags=["Backtesting Avanzado"]
+)

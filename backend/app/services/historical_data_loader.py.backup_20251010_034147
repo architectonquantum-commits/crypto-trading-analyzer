@@ -1,0 +1,85 @@
+"""
+Cargador de Datos Históricos desde CSV
+"""
+import pandas as pd
+from pathlib import Path
+from datetime import datetime
+from typing import Optional
+
+class HistoricalDataLoader:
+    """Carga datos históricos desde archivos CSV."""
+    
+    def __init__(self, data_dir: str = "data"):
+        self.data_dir = Path(data_dir)
+        self.cache = {}
+    
+    def load_data(
+        self,
+        symbol: str,
+        timeframe: str,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ) -> pd.DataFrame:
+        """
+        Carga datos históricos desde CSV.
+        Prioriza datos REALES sobre sintéticos.
+        """
+        
+        # Buscar archivo (priorizar REALES)
+        symbol_file = symbol.replace('/', '_')
+        pattern_real = f"{symbol_file}_{timeframe}_*_REAL.csv"
+        pattern_synth = f"{symbol_file}_{timeframe}_*.csv"
+        
+        # Intentar primero datos REALES
+        files = list(self.data_dir.glob(pattern_real))
+        
+        if not files:
+            # Fallback a sintéticos
+            files = [f for f in self.data_dir.glob(pattern_synth) if '_REAL' not in f.name]
+            if files:
+                print(f"⚠️ Usando datos sintéticos para {symbol} {timeframe}")
+        else:
+            print(f"✅ Usando datos REALES para {symbol} {timeframe}")
+        
+        if not files:
+            raise FileNotFoundError(
+                f"No se encontró dataset para {symbol} {timeframe}"
+            )
+        
+        # Usar el más reciente
+        csv_file = sorted(files)[-1]
+        
+        # Cargar desde cache o archivo
+        cache_key = str(csv_file)
+        if cache_key not in self.cache:
+            print(f"📂 Cargando: {csv_file.name}")
+            df = pd.read_csv(csv_file)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            self.cache[cache_key] = df
+        else:
+            df = self.cache[cache_key].copy()
+        
+        # Filtrar por fechas
+        if start_date:
+            df = df[df['timestamp'] >= start_date]
+        if end_date:
+            df = df[df['timestamp'] <= end_date]
+        
+        print(f"✅ {len(df)} velas | {df['timestamp'].min()} a {df['timestamp'].max()}")
+        
+        return df
+    
+    def list_available_datasets(self) -> list:
+        """Lista datasets disponibles."""
+        files = list(self.data_dir.glob("*.csv"))
+        return sorted([f.name for f in files])
+
+# Singleton
+_loader = None
+
+def get_historical_loader() -> HistoricalDataLoader:
+    """Obtiene instancia del loader."""
+    global _loader
+    if _loader is None:
+        _loader = HistoricalDataLoader()
+    return _loader
