@@ -7,6 +7,7 @@ import LoadingSpinner from '../../shared/LoadingSpinner';
 import MonteCarloChart from './MonteCarloChart';
 import AdvancedMetricsTable from './AdvancedMetricsTable';
 import SessionAnalysis from './SessionAnalysis';
+import RealityCheckCard from './RealityCheckCard';
 import TemporalAnalysisCard from './TemporalAnalysisCard';
 
 export default function AdvancedBacktestTab({ validationResult }) {
@@ -176,6 +177,11 @@ export default function AdvancedBacktestTab({ validationResult }) {
             analysis={temporalAnalysis}
             loading={contextLoading}
           />
+          
+          {/* Reality Check */}
+          {results.reality_check && (
+            <RealityCheckCard data={results.reality_check} />
+          )}
         </>
       )}
     </div>
