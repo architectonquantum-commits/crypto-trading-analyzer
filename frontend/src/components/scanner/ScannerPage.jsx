@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
+import FilterPanel from './FilterPanel';
 import { Button, LoadingSpinner, Badge } from '../shared';
 import useScannerStore from '../../store/scannerStore';
 import { formatCurrency } from '../../utils/formatters';
@@ -8,7 +9,7 @@ import toast from 'react-hot-toast';
 
 export default function ScannerPage() {
   const navigate = useNavigate();
-  const { scanResults, loading, runScanner } = useScannerStore();
+  const { scanResults, loading, filters, runScanner, setFilters, clearFilters } = useScannerStore();
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('confluence');
   const [customSymbols, setCustomSymbols] = useState('');
@@ -134,6 +135,9 @@ export default function ScannerPage() {
           )}
         </div>
       </div>
+
+      {/* Filtros Avanzados */}
+      <FilterPanel />
 
       {/* Scanner Personalizado */}
       <div className="bg-slate-800 rounded-lg p-6 mb-6">
@@ -300,6 +304,17 @@ export default function ScannerPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-white">{opp.total_score}/25</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                          opp.direction === 'LONG' ? 'bg-green-600 text-white' : 
+                          opp.direction === 'SHORT' ? 'bg-red-600 text-white' : 
+                          'bg-gray-600 text-white'
+                        }`}>
+                          {opp.direction === 'LONG' ? '🟢 LONG' : 
+                           opp.direction === 'SHORT' ? '🔴 SHORT' : 
+                           '⚪ N/A'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <Badge type={isOperar ? 'success' : 'warning'}>
                           {recommendation}
