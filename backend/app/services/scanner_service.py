@@ -185,6 +185,47 @@ class ScannerService:
                 "direction": None
             }
     
+
+    def apply_advanced_filters(
+        self, 
+        opportunities: list, 
+        request
+    ) -> list:
+        """
+        Aplica filtros avanzados a las oportunidades detectadas
+        
+        Filtros:
+        - direction_filter: Filtra LONG o SHORT
+        - exchange_filter: Filtra por exchange (kraken/binance)
+        
+        Returns:
+            Lista filtrada de oportunidades
+        """
+        filtered = opportunities
+        filters_info = {}
+        
+        # 🔹 FILTRO 1: Dirección (LONG/SHORT)
+        if request.direction_filter:
+            direction_upper = request.direction_filter.upper()
+            filtered = [
+                opp for opp in filtered 
+                if opp.direction and opp.direction.upper() == direction_upper
+            ]
+            filters_info['direction'] = direction_upper
+            print(f"   🔹 Filtro dirección '{direction_upper}': {len(filtered)} resultados")
+        
+        # 🔹 FILTRO 2: Exchange (kraken/binance)
+        if request.exchange_filter:
+            exchanges_lower = [ex.lower() for ex in request.exchange_filter]
+            filtered = [
+                opp for opp in filtered 
+                if opp.exchange.lower() in exchanges_lower
+            ]
+            filters_info['exchanges'] = exchanges_lower
+            print(f"   🔹 Filtro exchanges {exchanges_lower}: {len(filtered)} resultados")
+        
+        return filtered, filters_info
+    
     async def scan_all_cryptos(self, request: ScannerRequest) -> ScannerResponse:
         """Escanea todas las criptomonedas configuradas"""
         
@@ -234,16 +275,26 @@ class ScannerService:
             for opp in opportunities
         ]
         
-        print(f"\n✅ Escaneo completado: {len(opportunities)} oportunidades encontradas")
+        # 🆕 Aplicar filtros avanzados
+        filters_info = {}
+        if request.direction_filter or request.exchange_filter:
+            print(f"\n🔍 Aplicando filtros avanzados...")
+            top_opportunities, filters_info = self.apply_advanced_filters(
+                top_opportunities, 
+                request
+            )
+        
+        print(f"\n✅ Escaneo completado: {len(top_opportunities)} oportunidades encontradas (después de filtros)")
         
         return ScannerResponse(
             timestamp=datetime.now().isoformat(),
             timeframe=request.timeframe,
             total_scanned=len(symbols),
-            opportunities_found=len(opportunities),
+            opportunities_found=len(top_opportunities),
             min_confluence_filter=request.min_confluence,
             top_opportunities=top_opportunities,
-            all_results=results
+            all_results=results,
+            filters_applied=filters_info if filters_info else None
         )
     
     def get_scanner_status(self):

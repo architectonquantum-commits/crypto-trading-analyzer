@@ -16,6 +16,16 @@ class ScannerRequest(BaseModel):
         default=None,
         description="Lista opcional de símbolos a escanear (ej: ['BTC', 'ETH']). Si es None, escanea las 23 por defecto"
     )
+    
+    # 🆕 FILTROS AVANZADOS
+    direction_filter: Optional[str] = Field(
+        default=None,
+        description="Filtrar por dirección: 'LONG', 'SHORT', o None para ambos"
+    )
+    exchange_filter: Optional[List[str]] = Field(
+        default=None,
+        description="Filtrar por exchanges: ['kraken'], ['binance'], ['kraken', 'binance'], o None para todos"
+    )
 
 class CryptoOpportunity(BaseModel):
     """Oportunidad detectada en una criptomoneda"""
@@ -41,3 +51,6 @@ class ScannerResponse(BaseModel):
     min_confluence_filter: float
     top_opportunities: List[CryptoOpportunity]
     all_results: List[dict]
+    
+    # 🆕 Información de filtros aplicados
+    filters_applied: Optional[dict] = None

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
+import FilterPanel from './FilterPanel';
 import { Button, LoadingSpinner, Badge } from '../shared';
 import useScannerStore from '../../store/scannerStore';
 import { formatCurrency } from '../../utils/formatters';
@@ -8,7 +9,7 @@ import toast from 'react-hot-toast';
 
 export default function ScannerPage() {
   const navigate = useNavigate();
-  const { scanResults, loading, runScanner } = useScannerStore();
+  const { scanResults, loading, progress, filters, runScanner, setFilters, clearFilters } = useScannerStore();
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('confluence');
   const [customSymbols, setCustomSymbols] = useState('');
@@ -104,8 +105,36 @@ export default function ScannerPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" />
-        <div className="mt-4 text-center">
+        {/* Progress Circle */}
+        <div className="relative w-32 h-32">
+          <svg className="transform -rotate-90 w-32 h-32">
+            <circle
+              cx="64"
+              cy="64"
+              r="56"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="transparent"
+              className="text-slate-700"
+            />
+            <circle
+              cx="64"
+              cy="64"
+              r="56"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="transparent"
+              strokeDasharray={2 * Math.PI * 56}
+              strokeDashoffset={2 * Math.PI * 56 * (1 - progress / 100)}
+              className="text-blue-500 transition-all duration-500"
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-3xl font-bold text-white">{Math.round(progress)}%</span>
+          </div>
+        </div>
+        <div className="mt-6 text-center">
           <p className="text-lg font-semibold text-white">Analizando criptomonedas...</p>
           <p className="text-sm text-slate-400 mt-2">Esto puede tomar 10-90 segundos</p>
         </div>
@@ -134,6 +163,9 @@ export default function ScannerPage() {
           )}
         </div>
       </div>
+
+      {/* Filtros Avanzados */}
+      <FilterPanel />
 
       {/* Scanner Personalizado */}
       <div className="bg-slate-800 rounded-lg p-6 mb-6">
@@ -300,6 +332,17 @@ export default function ScannerPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-white">{opp.total_score}/25</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                          opp.direction === 'LONG' ? 'bg-green-600 text-white' : 
+                          opp.direction === 'SHORT' ? 'bg-red-600 text-white' : 
+                          'bg-gray-600 text-white'
+                        }`}>
+                          {opp.direction === 'LONG' ? '🟢 LONG' : 
+                           opp.direction === 'SHORT' ? '🔴 SHORT' : 
+                           '⚪ N/A'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <Badge type={isOperar ? 'success' : 'warning'}>
                           {recommendation}
