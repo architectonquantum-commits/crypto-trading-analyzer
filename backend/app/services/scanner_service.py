@@ -189,7 +189,12 @@ class ScannerService:
         """Escanea todas las criptomonedas configuradas"""
         
         # Obtener lista de símbolos
-        symbols = get_all_symbols()
+        # Usar símbolos personalizados o todos por defecto
+        symbols = request.symbols if request.symbols else get_all_symbols()
+        
+        # Validar máximo 5 símbolos personalizados
+        if request.symbols and len(request.symbols) > 5:
+            raise ValueError("Máximo 5 símbolos permitidos para escaneo personalizado")
         
         print(f"🔍 Escaneando {len(symbols)} criptomonedas...")
         print(f"📊 Timeframe: {request.timeframe}")

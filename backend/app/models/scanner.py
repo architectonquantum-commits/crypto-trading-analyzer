@@ -12,6 +12,10 @@ class ScannerRequest(BaseModel):
         le=100,
         description="Confluencia mínima para considerar oportunidad (%)"
     )
+    symbols: Optional[List[str]] = Field(
+        default=None,
+        description="Lista opcional de símbolos a escanear (ej: ['BTC', 'ETH']). Si es None, escanea las 23 por defecto"
+    )
 
 class CryptoOpportunity(BaseModel):
     """Oportunidad detectada en una criptomoneda"""
