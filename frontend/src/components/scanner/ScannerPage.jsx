@@ -11,6 +11,7 @@ export default function ScannerPage() {
   const { scanResults, loading, runScanner } = useScannerStore();
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('confluence');
+  const [customSymbols, setCustomSymbols] = useState('');
 
   const handleRunScanner = async () => {
     try {
@@ -18,6 +19,33 @@ export default function ScannerPage() {
       toast.success('¡Scanner completado!');
     } catch (error) {
       toast.error('Error al ejecutar scanner');
+    }
+  };
+
+  const handleScanCustom = async () => {
+    if (!customSymbols.trim()) {
+      toast.error('Ingresa al menos 1 símbolo');
+      return;
+    }
+    
+    // Parsear símbolos: split por coma, trim, uppercase, agregar /USDT
+    const symbolsList = customSymbols
+      .split(',')
+      .map(s => s.trim().toUpperCase())
+      .filter(s => s.length > 0)
+      .map(s => s.includes('/') ? s : `${s}/USDT`);
+    
+    // Validar máximo 5
+    if (symbolsList.length > 5) {
+      toast.error('Máximo 5 monedas permitidas');
+      return;
+    }
+    
+    try {
+      await runScanner(symbolsList);
+      toast.success(`¡Scanner completado! ${symbolsList.length} moneda(s) analizadas`);
+    } catch (error) {
+      toast.error('Error al ejecutar scanner personalizado');
     }
   };
 
@@ -78,8 +106,8 @@ export default function ScannerPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <LoadingSpinner size="lg" />
         <div className="mt-4 text-center">
-          <p className="text-lg font-semibold text-white">Analizando 23 criptomonedas...</p>
-          <p className="text-sm text-slate-400 mt-2">(60-90 segundos)</p>
+          <p className="text-lg font-semibold text-white">Analizando criptomonedas...</p>
+          <p className="text-sm text-slate-400 mt-2">Esto puede tomar 10-90 segundos</p>
         </div>
       </div>
     );
@@ -105,6 +133,40 @@ export default function ScannerPage() {
             </p>
           )}
         </div>
+      </div>
+
+      {/* Scanner Personalizado */}
+      <div className="bg-slate-800 rounded-lg p-6 mb-6">
+        <h3 className="text-lg font-semibold text-white mb-3">🎯 Escaneo Personalizado</h3>
+        <p className="text-sm text-slate-400 mb-4">
+          Analiza hasta 5 monedas específicas (ej: BTC, ETH, XRP, ADA, SOL)
+        </p>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={customSymbols}
+            onChange={(e) => setCustomSymbols(e.target.value)}
+            placeholder="BTC, ETH, XRP, ADA, SOL"
+            className="flex-1 bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
+            disabled={loading}
+          />
+          <Button
+            variant="secondary"
+            onClick={handleScanCustom}
+            disabled={loading || !customSymbols.trim()}
+            className="flex items-center gap-2 whitespace-nowrap"
+          >
+            <Search size={20} />
+            Escanear Seleccionadas
+          </Button>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="flex-1 h-px bg-slate-700"></div>
+        <span className="text-slate-500 text-sm">o escanea todas</span>
+        <div className="flex-1 h-px bg-slate-700"></div>
       </div>
 
       <div className="flex justify-center">

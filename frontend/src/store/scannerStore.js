@@ -7,12 +7,12 @@ const useScannerStore = create((set, get) => ({
   scanResults: null,
   loading: false,
   error: null,
-
+  
   // Acciones
-  runScanner: async () => {
+  runScanner: async (symbols = null) => {
     set({ loading: true, error: null });
     try {
-      const data = await scannerApi.runScanner();
+      const data = await scannerApi.runScanner(symbols);
       
       // 🆕 NUEVO: Filtrar resultados con ERROR
       const validResults = data.all_results?.filter(
@@ -35,7 +35,7 @@ const useScannerStore = create((set, get) => ({
       throw error;
     }
   },
-
+  
   getStatus: async () => {
     try {
       const data = await scannerApi.getStatus();
@@ -46,7 +46,7 @@ const useScannerStore = create((set, get) => ({
       throw error;
     }
   },
-
+  
   clearResults: () => {
     set({ scanResults: null, error: null });
   },
