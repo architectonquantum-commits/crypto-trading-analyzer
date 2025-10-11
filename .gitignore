@@ -1,0 +1,4 @@
+*.pid
+.backend.pid
+.frontend.pid
+backups/
