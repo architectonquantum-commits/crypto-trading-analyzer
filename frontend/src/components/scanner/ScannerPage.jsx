@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 export default function ScannerPage() {
   const navigate = useNavigate();
-  const { scanResults, loading, filters, runScanner, setFilters, clearFilters } = useScannerStore();
+  const { scanResults, loading, progress, filters, runScanner, setFilters, clearFilters } = useScannerStore();
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('confluence');
   const [customSymbols, setCustomSymbols] = useState('');
@@ -105,8 +105,36 @@ export default function ScannerPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" />
-        <div className="mt-4 text-center">
+        {/* Progress Circle */}
+        <div className="relative w-32 h-32">
+          <svg className="transform -rotate-90 w-32 h-32">
+            <circle
+              cx="64"
+              cy="64"
+              r="56"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="transparent"
+              className="text-slate-700"
+            />
+            <circle
+              cx="64"
+              cy="64"
+              r="56"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="transparent"
+              strokeDasharray={2 * Math.PI * 56}
+              strokeDashoffset={2 * Math.PI * 56 * (1 - progress / 100)}
+              className="text-blue-500 transition-all duration-500"
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-3xl font-bold text-white">{Math.round(progress)}%</span>
+          </div>
+        </div>
+        <div className="mt-6 text-center">
           <p className="text-lg font-semibold text-white">Analizando criptomonedas...</p>
           <p className="text-sm text-slate-400 mt-2">Esto puede tomar 10-90 segundos</p>
         </div>
