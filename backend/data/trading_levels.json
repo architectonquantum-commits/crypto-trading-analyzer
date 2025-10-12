@@ -1,0 +1,35 @@
+[
+  {
+    "id": "bd45ec55-2550-4075-8ff9-67ca8cf85793",
+    "symbol": "ADA/USDT",
+    "level_type": "FVG",
+    "direction": "BULLISH",
+    "zone_high": 0.64,
+    "zone_low": 0.62,
+    "notes": null,
+    "active": true,
+    "created_at": "2025-10-12T00:28:17.199201"
+  },
+  {
+    "id": "e56cb342-7956-4dd5-9746-ea449a080acc",
+    "symbol": "ADA/USDT",
+    "level_type": "Order Block",
+    "direction": "BULLISH",
+    "zone_high": 0.68,
+    "zone_low": null,
+    "notes": "\"Order Block semanal - zona de compra institucional\"",
+    "active": true,
+    "created_at": "2025-10-12T00:30:14.361531"
+  },
+  {
+    "id": "53cdb999-baea-4cec-af92-a5b93dc16a5a",
+    "symbol": "BTC/USDT",
+    "level_type": "FVG",
+    "direction": "BULLISH",
+    "zone_high": 111000.0,
+    "zone_low": 109000.0,
+    "notes": "prueba",
+    "active": true,
+    "created_at": "2025-10-12T00:47:41.684562"
+  }
+]

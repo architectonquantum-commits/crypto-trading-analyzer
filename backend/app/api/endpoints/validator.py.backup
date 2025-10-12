@@ -384,8 +384,8 @@ async def create_trading_level(level_data: TradingLevelCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/levels")
-async def get_levels_by_symbol(symbol: str = Query(...), active_only: bool = True):
+@router.get("/levels/{symbol}")
+async def get_levels_by_symbol(symbol: str, active_only: bool = True):
     """Obtener niveles por símbolo"""
     try:
         levels = levels_service.get_levels_by_symbol(symbol, active_only)

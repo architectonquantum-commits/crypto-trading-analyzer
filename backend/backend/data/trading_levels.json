@@ -1,0 +1,35 @@
+[
+  {
+    "id": "88f7ca27-753a-4aad-97df-83196765e0f2",
+    "symbol": "XRP/USDT",
+    "level_type": "FVG",
+    "direction": "BULLISH",
+    "zone_high": 2.8,
+    "zone_low": 2.32,
+    "notes": null,
+    "active": true,
+    "created_at": "2025-10-11T23:40:56.574018"
+  },
+  {
+    "id": "5014eefd-3b22-45f4-8771-0506e8a556cb",
+    "symbol": "BTC/USDT",
+    "level_type": "FVG",
+    "direction": "BULLISH",
+    "zone_high": 40500.0,
+    "zone_low": 40000.0,
+    "notes": "Test manual",
+    "active": true,
+    "created_at": "2025-10-11T23:55:42.061009"
+  },
+  {
+    "id": "2c3002e4-62e3-4bf1-8115-4900515e2905",
+    "symbol": "SOL/USDT",
+    "level_type": "FVG",
+    "direction": "BULLISH",
+    "zone_high": 180.0,
+    "zone_low": 178.0,
+    "notes": "Prueba 2",
+    "active": true,
+    "created_at": "2025-10-12T00:23:40.035199"
+  }
+]
