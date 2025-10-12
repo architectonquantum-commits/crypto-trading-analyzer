@@ -4,7 +4,7 @@ modules = ["nodejs-20", "python-3.11"]
 
 [nix]
 channel = "stable-23_11"
-packages = ["glibcLocales", "graphicsmagick-imagemagick-compat", "libxcrypt", "lsof", "mailutils", "postgresql", "psmisc", "sqlite-interactive", "tesseract", "tree", "nano"]
+packages = ["glibcLocales", "graphicsmagick-imagemagick-compat", "libxcrypt", "lsof", "mailutils", "nano", "postgresql", "psmisc", "sqlite-interactive", "tesseract", "tree"]
 
 [deployment]
 run = ["sh", "-c", "bash start.sh"]
@@ -12,6 +12,10 @@ run = ["sh", "-c", "bash start.sh"]
 [[ports]]
 localPort = 5173
 externalPort = 80
+
+[[ports]]
+localPort = 5174
+externalPort = 3000
 
 [[ports]]
 localPort = 8000
