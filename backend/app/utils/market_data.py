@@ -11,7 +11,7 @@ class MarketDataFetcher:
         """Inicializa fetcher con múltiples exchanges"""
         self.exchanges = {
             "kraken": ccxt.kraken({'enableRateLimit': True}),
-            "binance": ccxt.binance({'enableRateLimit': True}),
+            "kucoin": ccxt.kucoin({'enableRateLimit': True}),
             "coinex": ccxt.coinex({'enableRateLimit': True})
         }
         logger.info(f"✅ Exchanges inicializados: {list(self.exchanges.keys())}")
