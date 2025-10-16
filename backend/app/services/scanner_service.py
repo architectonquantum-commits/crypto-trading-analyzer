@@ -113,7 +113,7 @@ class ScannerService:
         
         # Delay anti-rate-limit (más lento para Kraken)
         if exchange_name == "kraken":
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.6)
         else:
             await asyncio.sleep(0.3)
         try:
