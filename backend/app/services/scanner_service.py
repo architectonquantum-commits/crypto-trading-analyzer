@@ -1,3 +1,4 @@
+import asyncio
 # backend/app/services/scanner_service.py
 from typing import Dict, Any
 from datetime import datetime
@@ -26,8 +27,28 @@ class ScannerService:
         self.macro_module = MacroAnalysisModule()
         self.sentiment_module = SentimentAnalysisModule()
         self.fetcher = MarketDataFetcher()
+        
+        # Cache para BTC/ETH
+        self.btc_cache = {}
+        self.eth_cache = {}
     
     def calculate_atr(self, df: pd.DataFrame, period: int = 14) -> float:
+
+    async def get_btc_data(self, timeframe: str = "1d"):
+        """Obtiene datos de BTC con cache"""
+        cache_key = f"BTC_{timeframe}"
+        if cache_key not in self.btc_cache:
+            print("   📊 Obteniendo datos de BTC (cache)...")
+            self.btc_cache[cache_key] = await self.fetcher.get_ohlcv("BTC/USDT", timeframe, limit=50)
+        return self.btc_cache[cache_key]
+    
+    async def get_eth_data(self, timeframe: str = "1d"):
+        """Obtiene datos de ETH con cache"""
+        cache_key = f"ETH_{timeframe}"
+        if cache_key not in self.eth_cache:
+            print("   📊 Obteniendo datos de ETH (cache)...")
+            self.eth_cache[cache_key] = await self.fetcher.get_ohlcv("ETH/USDT", timeframe, limit=50)
+        return self.eth_cache[cache_key]
         """
         Calcula ATR (Average True Range) - Indicador de volatilidad
         
@@ -110,6 +131,9 @@ class ScannerService:
         exchange_name = get_exchange_for_crypto(symbol)
         
         try:
+            # Delay anti-rate-limit
+            await asyncio.sleep(0.5)
+
             # Obtener datos de mercado usando el fetcher
             df = await self.fetcher.get_ohlcv(symbol, timeframe, limit=200)
             current_price = await self.fetcher.get_current_price(symbol)
@@ -121,8 +145,8 @@ class ScannerService:
             structure = self.structure_module.analyze(df, symbol, timeframe, current_price)
             
             # Módulo 4: Análisis macro (5 puntos)
-            df_btc = await self.fetcher.get_ohlcv("BTC/USDT", "1d", limit=50)
-            df_eth = await self.fetcher.get_ohlcv("ETH/USDT", "1d", limit=50)
+            df_btc = await self.get_btc_data("1d")
+            df_eth = await self.get_eth_data("1d")
             macro = self.macro_module.analyze(symbol, df, df_btc, df_eth, timeframe, current_price)
             
             # Módulo 5: Análisis de sentimiento (4 puntos)
@@ -252,6 +276,10 @@ class ScannerService:
         
         # Obtener lista de símbolos
         # Usar símbolos personalizados o todos por defecto
+        # Limpiar cache
+        self.btc_cache = {}
+        self.eth_cache = {}
+
         symbols = request.symbols if request.symbols else get_all_symbols()
         
         # Validar máximo 5 símbolos personalizados
