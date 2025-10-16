@@ -49,7 +49,25 @@ class ScannerService:
         tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
         atr = tr.rolling(window=period).mean().iloc[-1]
         
-        return round(atr, 2)
+        # Redondeo dinámico basado en el valor
+        if atr < 0.01:
+            return round(atr, 6)  # Para monedas de bajo precio
+        elif atr < 1:
+            return round(atr, 4)
+        else:
+            return round(atr, 2)
+    
+
+    def _get_precision(self, value: float) -> int:
+        """Determina cuántos decimales usar según el valor"""
+        if value < 0.01:
+            return 6
+        elif value < 1:
+            return 4
+        elif value < 100:
+            return 2
+        else:
+            return 2
     
     def calculate_sl_tp(self, current_price: float, atr: float, recommendation: str) -> Dict[str, Any]:
         """
@@ -65,16 +83,19 @@ class ScannerService:
         # Determinar dirección basada en recomendación
         if recommendation in ["STRONG BUY", "BUY"]:
             direction = "LONG"
-            stop_loss = round(current_price - (atr * 1.5), 2)
-            take_profit = round(current_price + (atr * 3.0), 2)
+            precision = self._get_precision(current_price)
+            stop_loss = round(current_price - (atr * 1.5), precision)
+            take_profit = round(current_price + (atr * 3.0), precision)
         elif recommendation in ["SELL", "STRONG SELL"]:
             direction = "SHORT"
-            stop_loss = round(current_price + (atr * 1.5), 2)
-            take_profit = round(current_price - (atr * 3.0), 2)
+            precision = self._get_precision(current_price)
+            stop_loss = round(current_price + (atr * 1.5), precision)
+            take_profit = round(current_price - (atr * 3.0), precision)
         else:  # HOLD
             direction = "LONG"  # Por defecto
-            stop_loss = round(current_price - (atr * 1.5), 2)
-            take_profit = round(current_price + (atr * 3.0), 2)
+            precision = self._get_precision(current_price)
+            stop_loss = round(current_price - (atr * 1.5), precision)
+            take_profit = round(current_price + (atr * 3.0), precision)
         
         return {
             "direction": direction,

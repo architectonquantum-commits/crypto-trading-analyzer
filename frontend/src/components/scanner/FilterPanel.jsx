@@ -47,7 +47,6 @@ export default function FilterPanel() {
     filters.direction_filter || 
     (filters.exchange_filter && filters.exchange_filter.length > 0);
 
-  // 🎨 PRE-CALCULAR CLASSNAMES FUERA DEL JSX
   const ambosClass = !filters.direction_filter
     ? 'flex-1 py-2 px-4 rounded-lg font-bold transition-all bg-blue-600 text-white shadow-lg ring-2 ring-blue-400'
     : 'flex-1 py-2 px-4 rounded-lg font-bold transition-all bg-slate-700 text-slate-300 hover:bg-slate-600';
@@ -155,28 +154,39 @@ export default function FilterPanel() {
               🏦 Exchange
             </label>
             <div className="flex gap-2">
-              {[
-                { value: 'kraken', label: 'Kraken' },
-                { value: 'binance', label: 'Binance' }
-              ].map((exchange) => {
-                const isSelected = filters.exchange_filter?.includes(exchange.value);
-                return (
-                  <button
-                    key={exchange.value}
-                    onClick={() => handleExchangeChange(exchange.value)}
-                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                      isSelected
-                        ? 'bg-green-600 text-white ring-2 ring-green-400'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    {isSelected ? '✓ ' : ''}{exchange.label}
-                  </button>
-                );
-              })}
+              <button
+                onClick={() => handleExchangeChange('kraken')}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                  filters.exchange_filter?.includes('kraken')
+                    ? 'bg-green-600 text-white ring-2 ring-green-400'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {filters.exchange_filter?.includes('kraken') ? '✓ ' : ''}Kraken
+              </button>
+              <button
+                onClick={() => handleExchangeChange('binance')}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                  filters.exchange_filter?.includes('binance')
+                    ? 'bg-green-600 text-white ring-2 ring-green-400'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {filters.exchange_filter?.includes('binance') ? '✓ ' : ''}Binance
+              </button>
+              <button
+                onClick={() => handleExchangeChange('coinex')}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                  filters.exchange_filter?.includes('coinex')
+                    ? 'bg-green-600 text-white ring-2 ring-green-400'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {filters.exchange_filter?.includes('coinex') ? '✓ ' : ''}CoinEx
+              </button>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Puedes seleccionar uno o ambos exchanges
+              Puedes seleccionar uno o más exchanges
             </p>
           </div>
         </div>

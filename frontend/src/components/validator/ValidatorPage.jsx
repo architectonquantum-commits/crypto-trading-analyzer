@@ -19,11 +19,20 @@ import LevelsProximityIndicator from './LevelsProximityIndicator';
 import useLevelsStore from '../../store/levelsStore';
 
 const CRYPTO_PAIRS = [
+  // Originales (23)
   'BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'SOL/USDT', 'ADA/USDT',
   'LINK/USDT', 'DOT/USDT', 'AVAX/USDT', 'MATIC/USDT', 'UNI/USDT',
   'LTC/USDT', 'ALGO/USDT', 'ATOM/USDT', 'XLM/USDT', 'DOGE/USDT',
   'AAVE/USDT', 'SNX/USDT', 'FIL/USDT', 'VET/USDT', 'ETC/USDT',
-  'TRX/USDT', 'SUSHI/USDT', 'BCH/USDT'
+  'TRX/USDT', 'SUSHI/USDT', 'BCH/USDT',
+  // Nuevas solicitadas (13)
+  'BNB/USDT', 'PEPE/USDT', 'BONK/USDT', 'HBAR/USDT', 'XDC/USDT',
+  'IOTA/USDT', 'VIRTUALS/USDT', 'ONDO/USDT', 'NEAR/USDT', 'W/USDT',
+  'RENDER/USDT', 'FLR/USDT', 'VELO/USDT',
+  // TOP por capitalización (14)
+  'HYPE/USDT', 'TON/USDT', 'SUI/USDT', 'TAO/USDT', 'ARB/USDT',
+  'OP/USDT', 'INJ/USDT', 'SEI/USDT', 'APT/USDT', 'IMX/USDT',
+  'FTM/USDT', 'RUNE/USDT', 'GRT/USDT', 'LDO/USDT',
 ];
 
 export default function ValidatorPage() {
@@ -260,7 +269,7 @@ export default function ValidatorPage() {
                 <Input
                   label="Precio de Entrada"
                   type="number"
-                  step="0.01"
+                  step="any"
                   {...register('precio_entrada', { required: 'Campo requerido' })}
                   error={errors.precio_entrada?.message}
                 />
@@ -268,7 +277,7 @@ export default function ValidatorPage() {
                 <Input
                   label="Stop Loss"
                   type="number"
-                  step="0.01"
+                  step="any"
                   {...register('stop_loss', { required: 'Campo requerido' })}
                   error={errors.stop_loss?.message}
                 />
@@ -276,7 +285,7 @@ export default function ValidatorPage() {
                 <Input
                   label="Take Profit"
                   type="number"
-                  step="0.01"
+                  step="any"
                   {...register('take_profit', { required: 'Campo requerido' })}
                   error={errors.take_profit?.message}
                 />

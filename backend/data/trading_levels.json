@@ -22,14 +22,36 @@
     "created_at": "2025-10-12T00:30:14.361531"
   },
   {
-    "id": "53cdb999-baea-4cec-af92-a5b93dc16a5a",
-    "symbol": "BTC/USDT",
+    "id": "e614a40a-0637-4615-8d61-5a94447b3e39",
+    "symbol": "SOL/USDT",
+    "level_type": "Order Block",
+    "direction": "BULLISH",
+    "zone_high": 145.0,
+    "zone_low": null,
+    "notes": null,
+    "active": true,
+    "created_at": "2025-10-14T16:20:46.462864"
+  },
+  {
+    "id": "2165690e-1144-46f3-a07f-f96940ac2940",
+    "symbol": "LTC/USDT",
     "level_type": "FVG",
     "direction": "BULLISH",
-    "zone_high": 111000.0,
-    "zone_low": 109000.0,
-    "notes": "prueba",
+    "zone_high": 97.2,
+    "zone_low": 91.5,
+    "notes": null,
     "active": true,
-    "created_at": "2025-10-12T00:47:41.684562"
+    "created_at": "2025-10-14T16:43:55.867865"
+  },
+  {
+    "id": "b224732a-bcaa-4bcb-a144-1077c788c55e",
+    "symbol": "LTC/USDT",
+    "level_type": "Order Block",
+    "direction": "BULLISH",
+    "zone_high": 87.65,
+    "zone_low": null,
+    "notes": null,
+    "active": true,
+    "created_at": "2025-10-14T16:45:55.968946"
   }
 ]
