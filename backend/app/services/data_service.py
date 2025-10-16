@@ -75,39 +75,46 @@ class DataService:
         return False
     
     def _download_data(self, symbol: str, timeframe: str, start_date: str, end_date: str) -> pd.DataFrame:
-        """Descarga datos usando CryptoCompare (sin restricciones geo)"""
+        """Descarga datos usando CCXT (mismo que scanner/validator)"""
         try:
-            logger.info(f"📡 Descargando con CryptoCompare: {symbol}")
+            logger.info(f"📡 Descargando con CCXT: {symbol}")
             
-            # Calcular días entre fechas
+            # Convertir fechas
             start = pd.to_datetime(start_date)
             end = pd.to_datetime(end_date)
-            days = (end - start).days
             
-            # Extraer símbolo base (BTC/USDT -> BTC)
-            base_symbol = symbol.split('/')[0]
+            # Importar MarketDataFetcher
+            from app.utils.market_data import MarketDataFetcher
+            import asyncio
             
-            # Usar fetcher de CryptoCompare
-            df = fetch_historical_data_crypto_compare(
-                symbol=base_symbol,
-                days=min(days, 365),  # Max 1 año
-                timeframe=timeframe
-            )
+            # Crear fetcher
+            fetcher = MarketDataFetcher()
+            
+            # Ejecutar descarga async
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            try:
+                df = loop.run_until_complete(
+                    fetcher.get_historical_ohlcv_range(
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        start_date=start,
+                        end_date=end
+                    )
+                )
+            finally:
+                loop.close()
             
             if df is None or df.empty:
-                logger.error(f"❌ CryptoCompare no retornó datos para {symbol}")
+                logger.error(f"❌ CCXT no retornó datos para {symbol}")
                 return None
             
-            # Filtrar por rango de fechas
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-            mask = (df['timestamp'] >= start) & (df['timestamp'] <= end)
-            df = df[mask]
-            
-            logger.info(f"✅ Descargadas {len(df)} velas de CryptoCompare")
+            logger.info(f"✅ Descargadas {len(df)} velas desde CCXT")
             return df
             
         except Exception as e:
-            logger.error(f"❌ Error en descarga CryptoCompare: {e}")
+            logger.error(f"❌ Error en descarga CCXT: {e}")
             import traceback
             traceback.print_exc()
             return None
