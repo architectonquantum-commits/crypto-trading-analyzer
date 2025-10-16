@@ -46,9 +46,11 @@ app = FastAPI(
     dependencies=[Depends(verify_credentials)]
 )
 
+# 🌐 CORS - ACTUALIZADO PARA VERCEL
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "https://crypto-trading-analyzer.vercel.app",  # ← Tu dominio de Vercel
     "https://*.vercel.app",
     "https://*.railway.app",
 ]
@@ -56,6 +58,8 @@ origins = [
 frontend_url = os.getenv("FRONTEND_URL")
 if frontend_url:
     origins.append(frontend_url)
+
+logger.info(f"🌐 CORS Origins configurados: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
