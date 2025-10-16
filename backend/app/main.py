@@ -89,3 +89,4 @@ def read_root():
         "docs": "/docs",
         "status": "🔒 Protected"
     }
+
