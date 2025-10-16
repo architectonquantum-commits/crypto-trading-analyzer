@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.endpoints import validator, scanner, journal, backtest
 from app.core.config import settings
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -12,10 +13,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS - Permitir todos los orígenes en desarrollo
+# CORS - Configuración para producción
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://*.vercel.app",
+    "https://*.railway.app",
+]
+
+# Si hay una variable de entorno FRONTEND_URL, agregarla
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
