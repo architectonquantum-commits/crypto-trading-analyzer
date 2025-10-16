@@ -3,6 +3,7 @@ from typing import Dict, Any
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import asyncio
 
 from app.models.scanner import ScannerRequest, ScannerResponse, CryptoOpportunity
 from app.services.modules.technical_analysis import TechnicalAnalysisModule
@@ -109,6 +110,12 @@ class ScannerService:
         
         exchange_name = get_exchange_for_crypto(symbol)
         
+        
+        # Delay anti-rate-limit (más lento para Kraken)
+        if exchange_name == "kraken":
+            await asyncio.sleep(1.0)
+        else:
+            await asyncio.sleep(0.3)
         try:
             # Obtener datos de mercado usando el fetcher
             df = await self.fetcher.get_ohlcv(symbol, timeframe, limit=200)
