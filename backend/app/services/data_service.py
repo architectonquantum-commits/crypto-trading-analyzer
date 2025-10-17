@@ -115,6 +115,18 @@ class DataService:
         logger.info(f"📊 Filtrado: {len(filtered)} velas en rango")
         return filtered
     
+    def _filter_date_range(self, df, start_date: str, end_date: str):
+        """Filtra DataFrame por rango de fechas"""
+        import pandas as pd
+        start = pd.to_datetime(start_date)
+        end = pd.to_datetime(end_date)
+        
+        mask = (df["timestamp"] >= start) & (df["timestamp"] <= end)
+        filtered = df[mask].copy()
+        
+        logger.info(f"📊 Filtrado: {len(filtered)} velas en rango")
+        return filtered
+
     def force_refresh(self, symbol: str, timeframe: str):
         """Fuerza actualización eliminando caché"""
         symbol_file = symbol.replace("/", "_")
