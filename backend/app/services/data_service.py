@@ -75,7 +75,7 @@ class DataService:
         return False
     
     def _download_data(self, symbol: str, timeframe: str, start_date: str, end_date: str) -> pd.DataFrame:
-        """Descarga datos usando CCXT (mismo que scanner/validator)"""
+        """Descarga datos usando CCXT SYNC (sin event loop issues)"""
         try:
             logger.info(f"📡 Descargando con CCXT: {symbol}")
             
@@ -85,26 +85,17 @@ class DataService:
             
             # Importar MarketDataFetcher
             from app.utils.market_data import MarketDataFetcher
-            import asyncio
             
             # Crear fetcher
             fetcher = MarketDataFetcher()
             
-            # Ejecutar descarga async
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            try:
-                df = loop.run_until_complete(
-                    fetcher.get_historical_ohlcv_range(
-                        symbol=symbol,
-                        timeframe=timeframe,
-                        start_date=start,
-                        end_date=end
-                    )
-                )
-            finally:
-                loop.close()
+            # Usar método SYNC (sin async, sin event loop)
+            df = fetcher.get_historical_ohlcv_range_sync(
+                symbol=symbol,
+                timeframe=timeframe,
+                start_date=start,
+                end_date=end
+            )
             
             if df is None or df.empty:
                 logger.error(f"❌ CCXT no retornó datos para {symbol}")
@@ -118,12 +109,6 @@ class DataService:
             import traceback
             traceback.print_exc()
             return None
-    
-    def _filter_date_range(self, df: pd.DataFrame, start_date: str, end_date: str) -> pd.DataFrame:
-        """Filtra DataFrame por rango de fechas"""
-        start = pd.to_datetime(start_date)
-        end = pd.to_datetime(end_date)
-        
         mask = (df['timestamp'] >= start) & (df['timestamp'] <= end)
         filtered = df[mask].copy()
         
